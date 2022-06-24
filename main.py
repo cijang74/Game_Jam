@@ -8,7 +8,7 @@ from pygame.sprite import *
 pygame.init()
 
 # 게임 타이틀 설정
-pygame.display.set_caption("군대 가기 전 마지막 게임")
+pygame.display.set_caption("")
 
 # FPS
 clock = pygame.time.Clock() 
@@ -81,6 +81,10 @@ playerLeftWalkSprites=[playerLeftWalk1,playerLeftStand,playerLeftWalk2,playerLef
 playerBackWalkSprites=[playerBackWalk1,playerBackStand,playerBackWalk2,playerBackStand]
 playerFrontWalkSprites=[playerFrontWalk1,playerFrontStand,playerFrontWalk2,playerFrontStand]
 
+playerGodmodSprite = pygame.image.load("Pictures/blank.png").convert()
+playerGodmodSprite = pygame.transform.scale(playerGodmodSprite, (256, 188))
+playerGodmodSprite.set_colorkey((255,255,255))
+
 # 클래스
 class Character(pygame.sprite.Sprite):
     def __init__(self): # 플레이어 관련 데이터 초기화
@@ -90,11 +94,12 @@ class Character(pygame.sprite.Sprite):
         self.image = playerRightStand # 이미지
         self.playerWalkSprites=[] #작동 스프라이트 저장, 추가함
         self.rect = self.image.get_rect()
-        self.rect.left, self.rect.top = (self.x,self.y)
+        self.rect.left, self.rect.top = (self.x + 36, self.y)
         self.canMove_L = True #추가
         self.canMove_R = True #추가
         self.canMove_U = True #추가
         self.canMove_D = True #추가
+        self.godMod = False
 
         self.top = self.y
         self.left = self.x
@@ -103,11 +108,12 @@ class Character(pygame.sprite.Sprite):
 
         self.lastInput = 0 #벽에 닿기 직전 사용자가 어떤 방향키를 누르고 벽에 닿았는지 좌우상하 순으로 1, 2, 3, 4로 저장
 
-        self.walkTimer=time.time()
+        self.walkTimer = time.time()
+        self.GodTimer = time.time()
 
     def draw(self): # 플레이어 그리기
 
-        if isMove==True:
+        if isMove==True and self.godMod == False:
             if time.time()-self.walkTimer<0.1:
                 self.image=self.playerWalkSprites[0]
             elif time.time()-self.walkTimer<0.2:
@@ -118,6 +124,10 @@ class Character(pygame.sprite.Sprite):
                 self.image=self.playerWalkSprites[3]
             else:
                 self.walkTimer=time.time()
+
+        elif self.godMod == True:
+            screen.blit(character.playerWalkSprites[1], (self.x, self.y))
+            
     
 
         screen.blit(self.image, (self.x, self.y))
@@ -127,7 +137,7 @@ class Character(pygame.sprite.Sprite):
         ################################################################################################ 40, 40 -> 256, 188
         self.character_rect_R = pygame.Rect(self.x + 197, self.y + 25, 25, 113) #추가 left / top / 너비 / 높이
 
-        self.character_rect_L = pygame.Rect(self.x + 34, self.y + 25, 25, 113) #추가
+        self.character_rect_L = pygame.Rect(self.x + 34 , self.y + 25, 25, 113) #추가
 
         self.character_rect_T = pygame.Rect(self.x+29, self.y, 113, 25) #추가
         
@@ -213,7 +223,7 @@ class Rock(pygame.sprite.Sprite):
         self.top = self.y
         self.left = self.x
         self.bottom = self.y + 80
-        self.right = self.x + 80
+        self.right = self.x + 50
         self.wall_rect = pygame.Rect(self.x, self.y, 130, 130) #벽 범위
 
     def draw(self):
@@ -254,8 +264,8 @@ class Enemy():
 
             self.top = self.y
             self.left = self.x
-            self.bottom = self.y + 200
-            self.right = self.x + 125
+            self.bottom = self.y + 192
+            self.right = self.x + 192
             self.walkTimer = time.time()
             self.isMove = False
 
@@ -390,6 +400,7 @@ class Enemy():
 
                     elif(self.go_top == True and self.canMove_U):
                             self.y -= 0.5 * dt # 윗쪽 이동
+                            self.rect = pygame.Rect.move(self.rect,0, (0.7 * dt))
             
             else:
                 self.isMove = False
@@ -404,6 +415,7 @@ enemys = []
 
 # flag 변수
 stage_set1_flag = True
+is_god_end = True
 
 
 can_move = True
@@ -424,13 +436,42 @@ def draw_all(rocks): # 모든 그림을 그려주는 함수
         for j in range (len(enemys)):
             enemys[j].draw()
 
-def is_character_touch_rock(): # 플레이어와 바위가 부딫혔는지 판단하는 함수
-    if(pygame.sprite.collide_rect(temp,rocks)):
-        print("Debug")
+def is_character_touch_enemy(enemys):
+    i = 0
+
+    for i in range (len(enemys)):
+        if character.y < enemys[i].y + 192 and enemys[i].y < character.y + 188 and character.x + 106 < enemys[i].x + 192 and enemys[i].x < character.x + 190:
+            character.godMod = True
+        else:
+            return False
 
 def stage_set1():
     rocks.append(Rock(800,400))
     enemys.append(Enemy(300,600,"dear"))
+
+def godMod_timer_and_draw_char(character):
+    is_god_end = False
+    if character.godMod == True:
+        if time.time()-character.GodTimer<0.2:
+            character.image = playerGodmodSprite
+        elif time.time()-character.GodTimer<0.4:
+            character.draw()
+            print("debug")
+        elif time.time()-character.GodTimer<0.6:
+            character.image = playerGodmodSprite
+        elif time.time()-character.GodTimer<0.8:
+            character.draw()
+            character.godMod = False
+        else:
+            character.GodTimer = time.time()
+            character.draw()
+        is_god_end = True
+    
+    else:
+        character.draw()
+
+
+
 
 # #튜토리얼1
 tutoRunning=True
@@ -607,7 +648,9 @@ while running:
         stage_set1()
         stage_set1_flag = False
 
+    godMod_timer_and_draw_char(character)
     draw_all(rocks)
+    is_character_touch_enemy(enemys)
     pygame.display.update() # 루프 내에서 발생한 모든 이미지 변화를 업데이트
 
 # pygame 종료
